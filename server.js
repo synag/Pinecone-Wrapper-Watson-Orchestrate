@@ -23,13 +23,28 @@ if (!PINECONE_API_KEY || !INDEX_HOST || !OPENAI_API_KEY || !INDEX_NAME) {
 const app = express();
 app.use(express.json({ limit: "1mb" }));
 
-// optional: protect with API key
+
 app.use((req, res, next) => {
-  if (!KNOWLEDGE_API_KEY) return next();
-  const key = req.get("x-api-key") || req.get("Api-Key");
-  if (key !== KNOWLEDGE_API_KEY) return res.status(401).json({ error: "unauthorized" });
-  next();
+  if (!KNOWLEDGE_API_KEY) return next();            // if no secret set, don’t block
+
+  const auth = req.get('authorization') || '';
+  const key =
+    req.get('x-api-key') ||
+    req.get('api-key') ||
+    (auth.match(/^(?:apikey|bearer)\s+(.+)$/i)?.[1]); // pull token from Authorization
+
+  if (key && key.trim() === KNOWLEDGE_API_KEY.trim()) return next();
+  return res.status(401).json({ error: 'unauthorized' });
 });
+
+
+// // optional: protect with API key
+// app.use((req, res, next) => {
+//   if (!KNOWLEDGE_API_KEY) return next();
+//   const key = req.get("x-api-key") || req.get("Api-Key");
+//   if (key !== KNOWLEDGE_API_KEY) return res.status(401).json({ error: "unauthorized" });
+//   next();
+// });
 
 // optional: health check
 app.get("/", (_, res) => res.json({ ok: true }));
